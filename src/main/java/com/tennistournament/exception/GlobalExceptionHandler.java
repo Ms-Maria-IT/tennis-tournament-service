@@ -11,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.tennistournament.controller")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
