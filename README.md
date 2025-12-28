@@ -27,11 +27,14 @@ Once the application is running, access Swagger UI at:
 API Docs (JSON) available at:
 - http://localhost:8080/api-docs
 
+## Monitoring with Prometheus
+
+Metrics endpoint: `/actuator/prometheus`
 
 ## 🚀 Quick Start
 
-git clone https://github.com/yourusername/tennis-tournament-service
-cd tennis-tournament-service
+git clone https://github.com/yourusername/tennis-tournament-service 
+cd tennis-tournament-service 
 ./gradlew bootRun
 
 
