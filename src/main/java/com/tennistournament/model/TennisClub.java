@@ -3,11 +3,18 @@ package com.tennistournament.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * TODO: TEMPORARY STUB - TennisClub functionality has been extracted to tennis-club-service microservice
+ * TODO: This entity should be removed once Tournament and TrainingSession are updated to use clubId (Long) instead
+ * TODO: and REST client integration is implemented to call tennis-club-service
+ * 
+ * This is kept temporarily to maintain compilation until REST client integration is complete.
+ * Tournament and TrainingSession services should call http://localhost:8081/api/clubs/{clubId} instead.
+ */
 @Entity
 @Table(name = "tennis_clubs")
+@Deprecated
 public class TennisClub {
 
     @Id
@@ -21,15 +28,6 @@ public class TennisClub {
 
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
-
-    @OneToMany(mappedBy = "tennisClub", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Court> courts = new ArrayList<>();
-
-    @OneToMany(mappedBy = "tennisClub", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Tournament> tournaments = new ArrayList<>();
-
-    @OneToMany(mappedBy = "tennisClub", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrainingSession> trainingSessions = new ArrayList<>();
 
     // Constructors
     public TennisClub() {
@@ -64,29 +62,4 @@ public class TennisClub {
     public void setAddress(String address) {
         this.address = address;
     }
-
-    public List<Court> getCourts() {
-        return courts;
-    }
-
-    public void setCourts(List<Court> courts) {
-        this.courts = courts;
-    }
-
-    public List<Tournament> getTournaments() {
-        return tournaments;
-    }
-
-    public void setTournaments(List<Tournament> tournaments) {
-        this.tournaments = tournaments;
-    }
-
-    public List<TrainingSession> getTrainingSessions() {
-        return trainingSessions;
-    }
-
-    public void setTrainingSessions(List<TrainingSession> trainingSessions) {
-        this.trainingSessions = trainingSessions;
-    }
 }
-

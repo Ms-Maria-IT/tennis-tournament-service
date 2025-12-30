@@ -2,6 +2,9 @@ package com.tennistournament.service.impl;
 
 import com.tennistournament.dto.TrainingSessionRequest;
 import com.tennistournament.dto.TrainingSessionResponse;
+// TODO: TennisClub functionality has been extracted to tennis-club-service microservice
+// TODO: Replace TennisClubRepository with REST client (Feign/WebClient) to call club service
+// TODO: Club service endpoint: http://localhost:8081/api/clubs/{clubId}
 import com.tennistournament.model.TennisClub;
 import com.tennistournament.model.TrainingSession;
 import com.tennistournament.model.UserProfile;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class TrainingSessionServiceImpl implements TrainingSessionService {
 
     private final TrainingSessionRepository trainingSessionRepository;
+    // TODO: Remove TennisClubRepository - replace with REST client to tennis-club-service
     private final TennisClubRepository tennisClubRepository;
     private final UserProfileRepository userProfileRepository;
 
@@ -35,6 +39,8 @@ public class TrainingSessionServiceImpl implements TrainingSessionService {
 
     @Override
     public TrainingSessionResponse createTrainingSession(Long clubId, TrainingSessionRequest request) {
+        // TODO: Replace with REST call to tennis-club-service: GET /api/clubs/{clubId}
+        // TODO: Use Feign client or WebClient to validate club exists
         TennisClub club = tennisClubRepository.findById(clubId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
                         "Tennis club not found with id: " + clubId));
