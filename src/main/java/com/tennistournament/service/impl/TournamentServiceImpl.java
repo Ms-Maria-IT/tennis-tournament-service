@@ -1,18 +1,16 @@
 package com.tennistournament.service.impl;
 
+import com.tennistournament.client.ClubServiceClient;
+import com.tennistournament.client.dto.ClubResponse;
 import com.tennistournament.dto.TournamentRequest;
 import com.tennistournament.dto.TournamentResponse;
-// TODO: TennisClub functionality has been extracted to tennis-club-service microservice
-// TODO: Replace TennisClubRepository with REST client (Feign/WebClient) to call club service
-// TODO: Club service endpoint: http://localhost:8081/api/clubs/{clubId}
-import com.tennistournament.model.TennisClub;
 import com.tennistournament.model.Tournament;
 import com.tennistournament.model.UserProfile;
-import com.tennistournament.repository.TennisClubRepository;
 import com.tennistournament.repository.TournamentRepository;
 import com.tennistournament.repository.UserProfileRepository;
 import com.tennistournament.service.TournamentService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,25 +23,34 @@ import java.util.stream.Collectors;
 public class TournamentServiceImpl implements TournamentService {
 
     private final TournamentRepository tournamentRepository;
-    // TODO: Remove TennisClubRepository - replace with REST client to tennis-club-service
-    private final TennisClubRepository tennisClubRepository;
     private final UserProfileRepository userProfileRepository;
+    private final ClubServiceClient clubServiceClient;
 
     public TournamentServiceImpl(TournamentRepository tournamentRepository,
-                                 TennisClubRepository tennisClubRepository,
-                                 UserProfileRepository userProfileRepository) {
+                                 UserProfileRepository userProfileRepository,
+                                 ClubServiceClient clubServiceClient) {
         this.tournamentRepository = tournamentRepository;
-        this.tennisClubRepository = tennisClubRepository;
         this.userProfileRepository = userProfileRepository;
+        this.clubServiceClient = clubServiceClient;
     }
 
     @Override
     public TournamentResponse createTournament(Long clubId, TournamentRequest request) {
-        // TODO: Replace with REST call to tennis-club-service: GET /api/clubs/{clubId}
-        // TODO: Use Feign client or WebClient to validate club exists
-        TennisClub club = tennisClubRepository.findById(clubId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-                        "Tennis club not found with id: " + clubId));
+        // Validate club exists via club service
+        // FeignErrorDecoder will throw ResponseStatusException for 4xx/5xx responses
+        // which will be handled by GlobalExceptionHandler and preserve the status code
+        try {
+            ResponseEntity<ClubResponse> clubResponse = clubServiceClient.getClubById(clubId);
+            
+            // Check if response body is null (shouldn't happen for 200, but safety check)
+            if (clubResponse.getBody() == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                        "Tennis club not found with id: " + clubId);
+            }
+        } catch (ResponseStatusException e) {
+            // Re-throw to preserve status code (404, 503, etc.)
+            throw e;
+        }
         
         // Validate date range
         if (request.getEndDateTime().isBefore(request.getStartDateTime())) {
@@ -56,7 +63,7 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setStartDateTime(request.getStartDateTime());
         tournament.setEndDateTime(request.getEndDateTime());
         tournament.setMaxParticipants(request.getMaxParticipants());
-        tournament.setTennisClub(club);
+        tournament.setTennisClubId(clubId);
         
         Tournament savedTournament = tournamentRepository.save(tournament);
         return mapToResponse(savedTournament);
@@ -141,9 +148,19 @@ public class TournamentServiceImpl implements TournamentService {
         response.setEndDateTime(tournament.getEndDateTime());
         response.setMaxParticipants(tournament.getMaxParticipants());
         
-        if (tournament.getTennisClub() != null) {
-            response.setTennisClubId(tournament.getTennisClub().getId());
-            response.setTennisClubName(tournament.getTennisClub().getName());
+        // Fetch club information from club service
+        if (tournament.getTennisClubId() != null) {
+            response.setTennisClubId(tournament.getTennisClubId());
+            try {
+                ResponseEntity<ClubResponse> clubResponse = clubServiceClient.getClubById(tournament.getTennisClubId());
+                if (clubResponse.getStatusCode() == HttpStatus.OK && clubResponse.getBody() != null) {
+                    response.setTennisClubName(clubResponse.getBody().getName());
+                }
+            } catch (Exception e) {
+                // If club service is unavailable, set name to null
+                // This allows the response to still be returned
+                response.setTennisClubName(null);
+            }
         }
         
         if (tournament.getParticipants() != null) {

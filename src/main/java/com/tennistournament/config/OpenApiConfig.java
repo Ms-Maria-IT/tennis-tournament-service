@@ -15,11 +15,8 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Tennis Tournament Management API")
-                        .description("REST API for managing tennis tournaments, training sessions, clubs, and user profiles")
+                        .description("REST API for managing tennis tournaments, training sessions, and user profiles")
                         .version("1.0.0")
-                        .contact(new Contact()
-                                .name("Tennis Tournament Team")
-                                .email("support@tennistournament.com"))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")));

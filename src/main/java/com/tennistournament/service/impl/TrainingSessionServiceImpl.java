@@ -1,18 +1,16 @@
 package com.tennistournament.service.impl;
 
+import com.tennistournament.client.ClubServiceClient;
+import com.tennistournament.client.dto.ClubResponse;
 import com.tennistournament.dto.TrainingSessionRequest;
 import com.tennistournament.dto.TrainingSessionResponse;
-// TODO: TennisClub functionality has been extracted to tennis-club-service microservice
-// TODO: Replace TennisClubRepository with REST client (Feign/WebClient) to call club service
-// TODO: Club service endpoint: http://localhost:8081/api/clubs/{clubId}
-import com.tennistournament.model.TennisClub;
 import com.tennistournament.model.TrainingSession;
 import com.tennistournament.model.UserProfile;
-import com.tennistournament.repository.TennisClubRepository;
 import com.tennistournament.repository.TrainingSessionRepository;
 import com.tennistournament.repository.UserProfileRepository;
 import com.tennistournament.service.TrainingSessionService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,25 +23,34 @@ import java.util.stream.Collectors;
 public class TrainingSessionServiceImpl implements TrainingSessionService {
 
     private final TrainingSessionRepository trainingSessionRepository;
-    // TODO: Remove TennisClubRepository - replace with REST client to tennis-club-service
-    private final TennisClubRepository tennisClubRepository;
     private final UserProfileRepository userProfileRepository;
+    private final ClubServiceClient clubServiceClient;
 
     public TrainingSessionServiceImpl(TrainingSessionRepository trainingSessionRepository,
-                                     TennisClubRepository tennisClubRepository,
-                                     UserProfileRepository userProfileRepository) {
+                                     UserProfileRepository userProfileRepository,
+                                     ClubServiceClient clubServiceClient) {
         this.trainingSessionRepository = trainingSessionRepository;
-        this.tennisClubRepository = tennisClubRepository;
         this.userProfileRepository = userProfileRepository;
+        this.clubServiceClient = clubServiceClient;
     }
 
     @Override
     public TrainingSessionResponse createTrainingSession(Long clubId, TrainingSessionRequest request) {
-        // TODO: Replace with REST call to tennis-club-service: GET /api/clubs/{clubId}
-        // TODO: Use Feign client or WebClient to validate club exists
-        TennisClub club = tennisClubRepository.findById(clubId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-                        "Tennis club not found with id: " + clubId));
+        // Validate club exists via club service
+        // FeignErrorDecoder will throw ResponseStatusException for 4xx/5xx responses
+        // which will be handled by GlobalExceptionHandler and preserve the status code
+        try {
+            ResponseEntity<ClubResponse> clubResponse = clubServiceClient.getClubById(clubId);
+            
+            // Check if response body is null (shouldn't happen for 200, but safety check)
+            if (clubResponse.getBody() == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                        "Tennis club not found with id: " + clubId);
+            }
+        } catch (ResponseStatusException e) {
+            // Re-throw to preserve status code (404, 503, etc.)
+            throw e;
+        }
         
         // Validate date range
         if (request.getEndDateTime().isBefore(request.getStartDateTime())) {
@@ -58,7 +65,7 @@ public class TrainingSessionServiceImpl implements TrainingSessionService {
         session.setEndDateTime(request.getEndDateTime());
         session.setMaxAttendees(request.getMaxAttendees());
         session.setCoachName(request.getCoachName());
-        session.setTennisClub(club);
+        session.setTennisClubId(clubId);
         
         TrainingSession savedSession = trainingSessionRepository.save(session);
         return mapToResponse(savedSession);
@@ -145,9 +152,19 @@ public class TrainingSessionServiceImpl implements TrainingSessionService {
         response.setMaxAttendees(session.getMaxAttendees());
         response.setCoachName(session.getCoachName());
         
-        if (session.getTennisClub() != null) {
-            response.setTennisClubId(session.getTennisClub().getId());
-            response.setTennisClubName(session.getTennisClub().getName());
+        // Fetch club information from club service
+        if (session.getTennisClubId() != null) {
+            response.setTennisClubId(session.getTennisClubId());
+            try {
+                ResponseEntity<ClubResponse> clubResponse = clubServiceClient.getClubById(session.getTennisClubId());
+                if (clubResponse.getStatusCode() == HttpStatus.OK && clubResponse.getBody() != null) {
+                    response.setTennisClubName(clubResponse.getBody().getName());
+                }
+            } catch (Exception e) {
+                // If club service is unavailable, set name to null
+                // This allows the response to still be returned
+                response.setTennisClubName(null);
+            }
         }
         
         if (session.getAttendees() != null) {

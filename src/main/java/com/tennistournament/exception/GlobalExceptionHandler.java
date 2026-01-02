@@ -1,5 +1,6 @@
 package com.tennistournament.exception;
 
+import feign.FeignException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -39,6 +40,18 @@ public class GlobalExceptionHandler {
         errorResponse.put("errors", errors);
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<Map<String, Object>> handleFeignException(FeignException ex) {
+        // Convert FeignException to appropriate HTTP status
+        // This is a safety net in case any FeignException slips through the ErrorDecoder
+        HttpStatus status = HttpStatus.valueOf(ex.status());
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", status.getReasonPhrase());
+        errorResponse.put("message", "Error calling club service: " + ex.getMessage());
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

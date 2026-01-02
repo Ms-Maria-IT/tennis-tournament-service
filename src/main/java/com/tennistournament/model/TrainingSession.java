@@ -39,9 +39,9 @@ public class TrainingSession {
     @Column(name = "coach_name")
     private String coachName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tennis_club_id", nullable = false)
-    private TennisClub tennisClub;
+    @NotNull(message = "Tennis club ID is required")
+    @Column(name = "tennis_club_id", nullable = false)
+    private Long tennisClubId;
 
     @ManyToMany
     @JoinTable(
@@ -57,14 +57,14 @@ public class TrainingSession {
 
     public TrainingSession(String name, String description, LocalDateTime startDateTime, 
                           LocalDateTime endDateTime, Integer maxAttendees, String coachName, 
-                          TennisClub tennisClub) {
+                          Long tennisClubId) {
         this.name = name;
         this.description = description;
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
         this.maxAttendees = maxAttendees;
         this.coachName = coachName;
-        this.tennisClub = tennisClub;
+        this.tennisClubId = tennisClubId;
     }
 
     // Getters and Setters
@@ -124,12 +124,12 @@ public class TrainingSession {
         this.coachName = coachName;
     }
 
-    public TennisClub getTennisClub() {
-        return tennisClub;
+    public Long getTennisClubId() {
+        return tennisClubId;
     }
 
-    public void setTennisClub(TennisClub tennisClub) {
-        this.tennisClub = tennisClub;
+    public void setTennisClubId(Long tennisClubId) {
+        this.tennisClubId = tennisClubId;
     }
 
     public Set<UserProfile> getAttendees() {
